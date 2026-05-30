@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class ArticleCard extends StatelessWidget {
@@ -40,12 +41,16 @@ class ArticleCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
+        margin: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3)),
+            BoxShadow(
+              color: AppColors.textDark.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -54,7 +59,7 @@ class ArticleCard extends StatelessWidget {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: _getCategoryColor().withValues(alpha: 0.15),
+                color: _getCategoryColor().withValues(alpha: 0.12),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   bottomLeft: Radius.circular(16),
@@ -64,32 +69,33 @@ class ArticleCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getCategoryColor().withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(category, style: TextStyle(
-                        fontSize: 10, fontWeight: FontWeight.w600, color: _getCategoryColor(),
+                      child: Text(category, style: GoogleFonts.nunito(
+                        fontSize: 10, fontWeight: FontWeight.w700, color: _getCategoryColor(),
                       )),
                     ),
                     const SizedBox(height: 8),
-                    Text(title, style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark,
+                    Text(title, style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark, height: 1.3,
                     ), maxLines: 2, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
-                        Text('Baca selengkapnya', style: TextStyle(
-                          fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600,
+                        Text('Baca selengkapnya', style: GoogleFonts.nunito(
+                          fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700,
                         )),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.primary),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.primary),
                       ],
                     ),
                   ],

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -32,6 +31,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final userId = prefs.getInt('user_id');
     if (userId != null) {
       Navigator.pushReplacementNamed(context, '/main');
@@ -54,8 +54,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [AppColors.primaryDark, Color(0xFF1A6B4A), AppColors.primary],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF2D6A4F), // Forest Green
+              Color(0xFF1B4332), // Deep Forest Green
+            ],
           ),
         ),
         child: FadeTransition(
@@ -65,28 +69,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 120, height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white, shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)],
-                  ),
-                  child: const Icon(Icons.child_care_rounded, size: 60, color: AppColors.primaryDark),
+                Image.asset(
+                  'assets/images/logoo_1.png',
+                  width: 240,
+                  height: 240,
                 ),
                 const SizedBox(height: 24),
-                Text('SmartGrowth', style: GoogleFonts.montserrat(
-                  fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white,
-                  letterSpacing: 1.2,
-                )),
+                Text(
+                  'SmartGrowth',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text('Monitoring Tumbuh Kembang Balita', style: GoogleFonts.nunito(
-                  fontSize: 14, color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w500,
-                )),
+                Text(
+                  'Monitoring Tumbuh Kembang Balita',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 60),
                 SizedBox(
-                  width: 30, height: 30,
+                  width: 30,
+                  height: 30,
                   child: CircularProgressIndicator(
-                    strokeWidth: 3, color: Colors.white.withValues(alpha: 0.7),
+                    strokeWidth: 3,
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
               ],

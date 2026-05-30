@@ -29,33 +29,21 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgCream,
-      appBar: AppBar(
-        backgroundColor: AppColors.bgCream,
-        elevation: 0,
-        title: Text(
-          _titles[_currentIndex],
-          style: GoogleFonts.montserrat(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: AppColors.primaryDark,
-          ),
-        ),
-        centerTitle: false,
-        actions: [
-          if (_currentIndex == 0)
-            IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryPale.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(12),
+      appBar: _currentIndex == 0 
+          ? null 
+          : AppBar(
+              backgroundColor: AppColors.bgCream,
+              elevation: 0,
+              title: Text(
+                _titles[_currentIndex],
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
                 ),
-                child: const Icon(Icons.notifications_outlined, color: AppColors.primaryDark, size: 20),
               ),
-              onPressed: () {},
+              centerTitle: false,
             ),
-        ],
-      ),
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,

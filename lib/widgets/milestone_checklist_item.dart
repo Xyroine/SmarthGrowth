@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class MilestoneChecklistItem extends StatelessWidget {
@@ -19,54 +20,67 @@ class MilestoneChecklistItem extends StatelessWidget {
       onTap: () => onChanged(!isChecked),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isChecked ? AppColors.primaryPale.withValues(alpha: 0.5) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isChecked ? AppColors.primary : AppColors.divider.withValues(alpha: 0.5),
-            width: 1.5,
-          ),
+          color: AppColors.bgWhite,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: AppColors.textDark.withValues(alpha: 0.04),
+              blurRadius: 12,
+              spreadRadius: 0,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
+            // Circular checkbox
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: 24,
-              height: 24,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
                 color: isChecked ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(7),
+                shape: BoxShape.circle,
                 border: Border.all(
                   color: isChecked ? AppColors.primary : AppColors.divider,
-                  width: 2,
+                  width: isChecked ? 0 : 1.5,
                 ),
               ),
               child: isChecked
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
+                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
                   : null,
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               child: Text(
                 text,
-                style: TextStyle(
-                  fontSize: 13,
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
                   fontWeight: isChecked ? FontWeight.w600 : FontWeight.w500,
-                  color: isChecked ? AppColors.primaryDark : AppColors.textDark,
-                  decoration: isChecked ? TextDecoration.lineThrough : null,
-                  decorationColor: AppColors.primary.withValues(alpha: 0.5),
+                  color: isChecked ? AppColors.primary : AppColors.textDark,
+                  height: 1.4,
                 ),
               ),
             ),
+            if (isChecked)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Tercapai',
+                  style: GoogleFonts.nunito(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

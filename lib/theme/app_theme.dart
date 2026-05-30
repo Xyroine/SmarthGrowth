@@ -2,35 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Primary
-  static const Color primaryDark = Color(0xFF18583D);
-  static const Color primary = Color(0xFF6BAF92);
-  static const Color primaryMedium = Color(0xFF327458);
-  static const Color primaryLight = Color(0xFF8ECFB3);
-  static const Color primarySoft = Color(0xFF8AC7AD);
-  static const Color primaryPale = Color(0xFFD4F8E9);
-  static const Color primaryPaleBg = Color(0xFFF8FFFC);
-  static const Color chipGreen = Color(0xFF8DD5B7);
+  // Primary (Forest Green)
+  static const Color primary = Color(0xFF2D6A4F);
+  static const Color primaryLight = Color(0xFF52B788);
+
+  // Secondary / Card (Soft Mint/Sage Pastel)
+  static const Color secondary = Color(0xFFE8F0EC);
+
+  // Accent (Soft Salmon/Coral — untuk status "Perlu distimulasi")
+  static const Color accent = Color(0xFFE9967A);
 
   // Background
-  static const Color bgCream = Color(0xFFFDF6EE);
-  static const Color bgWarm = Color(0xFFFFF0DC);
+  static const Color bgCream = Color(0xFFFDFBF7);
   static const Color bgWhite = Color(0xFFFFFFFF);
 
   // Text
-  static const Color textDark = Color(0xFF3D3530);
-  static const Color textMuted = Color(0xFF8C7B72);
-  static const Color textBlack = Color(0xFF000000);
+  static const Color textDark = Color(0xFF2F3E46);
+  static const Color textMuted = Color(0xFF7A8F95);
 
-  // Accent
-  static const Color accentYellow = Color(0xFFFFC107);
-  static const Color accentYellowLight = Color(0x38FFC107);
-
-  // Other
-  static const Color inputBg = Color(0xFFF1F1F1);
-  static const Color divider = Color(0xFFC0C0C0);
+  // Neutral
+  static const Color divider = Color(0xFFE0E0E0);
   static const Color grey = Color(0xFFD9D9D9);
-  static const Color shadow = Color(0x4018583D);
+  static const Color navInactive = Color(0xFFA0A0A0);
+  static const Color inputBg = Color(0xFFF1F1F1);
+
+  // Category accent colors
+  static const Color catKognitif = Color(0xFFFFB347);
+  static const Color catBahasa = Color(0xFF52B788);
+  static const Color catEmosional = Color(0xFFE9967A);
+
+  // Legacy aliases for backward-compatibility
+  static const Color primaryDark = primary;
+  static const Color primaryPale = secondary;
+  static const Color bgWarm = Color(0xFFFFF9F2);
+  static const Color accentYellow = Color(0xFFFFC107);
+  static const Color primaryMedium = Color(0xFF40916C);
 }
 
 class AppTheme {
@@ -38,49 +44,62 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      primaryColor: AppColors.primaryDark,
+      primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.bgCream,
       colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryDark,
-        secondary: AppColors.primary,
+        primary: AppColors.primary,
+        secondary: AppColors.primaryLight,
         surface: AppColors.bgCream,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: AppColors.textDark,
       ),
       textTheme: GoogleFonts.nunitoTextTheme().copyWith(
-        displayLarge: GoogleFonts.montserrat(
+        // H1 — 24px SemiBold (Nama Anak / Judul Utama)
+        displayLarge: GoogleFonts.plusJakartaSans(
           fontSize: 24,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           color: AppColors.textDark,
+          letterSpacing: 0,
         ),
-        displayMedium: GoogleFonts.montserrat(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
+        // H2 — 18px SemiBold (Judul Seksi / Nama Fitur)
+        displayMedium: GoogleFonts.plusJakartaSans(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
           color: AppColors.textDark,
+          letterSpacing: 0,
         ),
-        titleLarge: GoogleFonts.montserrat(
+        // Title — 16px SemiBold
+        titleLarge: GoogleFonts.plusJakartaSans(
           fontSize: 16,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           color: AppColors.textDark,
         ),
-        titleMedium: GoogleFonts.montserrat(
+        titleMedium: GoogleFonts.plusJakartaSans(
           fontSize: 14,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           color: AppColors.textDark,
         ),
+        // Body — 14px Regular, Line Height 140%
         bodyLarge: GoogleFonts.nunito(
           fontSize: 14,
+          fontWeight: FontWeight.w500,
           color: AppColors.textDark,
+          height: 1.4,
         ),
+        // Body Small — 12px
         bodyMedium: GoogleFonts.nunito(
           fontSize: 12,
           color: AppColors.textDark,
+          height: 1.4,
         ),
+        // Sub-caption — 12px Regular, abu-abu #7A8F95
         bodySmall: GoogleFonts.nunito(
-          fontSize: 10,
-          color: AppColors.textDark,
+          fontSize: 12,
+          color: AppColors.textMuted,
+          height: 1.4,
         ),
+        // Button label
         labelLarge: GoogleFonts.nunito(
           fontSize: 16,
           fontWeight: FontWeight.w700,
@@ -127,17 +146,17 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.bgCream,
         elevation: 0,
-        titleTextStyle: GoogleFonts.montserrat(
+        titleTextStyle: GoogleFonts.plusJakartaSans(
           fontSize: 16,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           color: AppColors.textDark,
         ),
         iconTheme: const IconThemeData(color: AppColors.textDark),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.primaryDark,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
+        backgroundColor: AppColors.bgWhite,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.navInactive,
       ),
     );
   }

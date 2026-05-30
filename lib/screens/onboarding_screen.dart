@@ -37,8 +37,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [AppColors.bgCream, Color(0xFFF0FFF7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.bgCream, AppColors.secondary],
           ),
         ),
         child: SafeArea(
@@ -48,9 +49,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 alignment: Alignment.topRight,
                 child: TextButton(
                   onPressed: _skip,
-                  child: Text('Lewati', style: GoogleFonts.nunito(
-                    color: AppColors.textMuted, fontWeight: FontWeight.w600,
-                  )),
+                  child: Text(
+                    'Lewati',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
               Expanded(
@@ -63,16 +68,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (i) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: _currentPage == i ? 28 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: _currentPage == i ? AppColors.primary : AppColors.grey,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                )),
+                children: List.generate(
+                    3,
+                    (i) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: _currentPage == i ? 28 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _currentPage == i ? AppColors.primary : AppColors.grey,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        )),
               ),
               const SizedBox(height: 40),
               Padding(
@@ -86,12 +93,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryDark,
+                    backgroundColor: AppColors.primary,
                     minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: Text(_currentPage < 2 ? 'Lanjut' : 'Mulai Sekarang',
-                    style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    _currentPage < 2 ? 'Lanjut' : 'Mulai Sekarang',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(height: 40),
@@ -109,21 +118,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 140, height: 140,
+            width: 140,
+            height: 140,
             decoration: BoxDecoration(
-              color: AppColors.primaryPale.withValues(alpha: 0.3),
+              color: AppColors.primary.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(data.icon, size: 70, color: AppColors.primaryDark),
+            child: Icon(data.icon, size: 64, color: AppColors.primary),
           ),
           const SizedBox(height: 40),
-          Text(data.title, style: GoogleFonts.montserrat(
-            fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primaryDark,
-          ), textAlign: TextAlign.center),
+          Text(
+            data.title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 16),
-          Text(data.desc, style: GoogleFonts.nunito(
-            fontSize: 15, color: AppColors.textMuted, height: 1.6,
-          ), textAlign: TextAlign.center),
+          Text(
+            data.desc,
+            style: GoogleFonts.nunito(
+              fontSize: 14,
+              color: AppColors.textMuted,
+              height: 1.6,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

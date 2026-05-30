@@ -25,7 +25,10 @@ class _MotorikScreenState extends State<MotorikScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final arg = ModalRoute.of(context)?.settings.arguments;
-    if (arg is ChildProfile) { _child = arg; _loadData(); }
+    if (arg is ChildProfile) {
+      _child = arg;
+      _loadData();
+    }
   }
 
   Future<void> _loadData() async {
@@ -50,70 +53,139 @@ class _MotorikScreenState extends State<MotorikScreen> {
     });
   }
 
-  double _progress(List<Milestone> list) => list.isEmpty ? 0 : _achieved.where((id) => list.any((m) => m.id == id)).length / list.length * 100;
+  double _progress(List<Milestone> list) =>
+      list.isEmpty ? 0 : _achieved.where((id) => list.any((m) => m.id == id)).length / list.length * 100;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgCream,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF4CAF50),
-        foregroundColor: Colors.white,
-        title: Text('Motorik', style: GoogleFonts.montserrat(fontWeight: FontWeight.w700)),
+        backgroundColor: AppColors.bgCream,
         elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
+        title: Text(
+          'Motorik',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // Age info
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: const Color(0xFF4CAF50).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
-                  child: Row(children: [
-                    const Icon(Icons.child_care_rounded, color: Color(0xFF4CAF50), size: 22),
-                    const SizedBox(width: 10),
-                    Text('${_child?.name ?? ''} • ${_child?.ageInMonths ?? 0} bulan', style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF4CAF50))),
-                  ]),
-                ),
-                const SizedBox(height: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Age info
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.child_care_rounded, color: AppColors.primary, size: 22),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${_child?.name ?? ''} • ${_child?.ageInMonths ?? 0} bulan',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                // Motorik Kasar
-                Text('Motorik Kasar', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                const SizedBox(height: 4),
-                Text('Kemampuan gerakan tubuh besar', style: GoogleFonts.nunito(fontSize: 12, color: AppColors.textMuted)),
-                const SizedBox(height: 10),
-                CustomProgressBar(label: 'Progress', percentage: _progress(_kasarMilestones), color: const Color(0xFF4CAF50)),
-                const SizedBox(height: 8),
-                ..._kasarMilestones.map((m) => MilestoneChecklistItem(
-                  text: m.description, isChecked: _achieved.contains(m.id), onChanged: (_) => _toggle(m.id!),
-                )),
+                  // Motorik Kasar
+                  Text(
+                    'Motorik Kasar',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Kemampuan gerakan tubuh besar',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomProgressBar(
+                    label: 'Progress',
+                    percentage: _progress(_kasarMilestones),
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  ..._kasarMilestones.map((m) => MilestoneChecklistItem(
+                        text: m.description,
+                        isChecked: _achieved.contains(m.id),
+                        onChanged: (_) => _toggle(m.id!),
+                      )),
 
-                const SizedBox(height: 24),
-                Divider(color: AppColors.divider.withValues(alpha: 0.3)),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+                  Divider(color: AppColors.divider.withValues(alpha: 0.5)),
+                  const SizedBox(height: 24),
 
-                // Motorik Halus
-                Text('Motorik Halus', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                const SizedBox(height: 4),
-                Text('Kemampuan gerakan tangan dan jari', style: GoogleFonts.nunito(fontSize: 12, color: AppColors.textMuted)),
-                const SizedBox(height: 10),
-                CustomProgressBar(label: 'Progress', percentage: _progress(_halusMilestones), color: const Color(0xFF66BB6A)),
-                const SizedBox(height: 8),
-                ..._halusMilestones.map((m) => MilestoneChecklistItem(
-                  text: m.description, isChecked: _achieved.contains(m.id), onChanged: (_) => _toggle(m.id!),
-                )),
+                  // Motorik Halus
+                  Text(
+                    'Motorik Halus',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Kemampuan gerakan tangan dan jari',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomProgressBar(
+                    label: 'Progress',
+                    percentage: _progress(_halusMilestones),
+                    color: AppColors.primaryLight,
+                  ),
+                  const SizedBox(height: 16),
+                  ..._halusMilestones.map((m) => MilestoneChecklistItem(
+                        text: m.description,
+                        isChecked: _achieved.contains(m.id),
+                        onChanged: (_) => _toggle(m.id!),
+                      )),
 
-                if (_kasarMilestones.isEmpty && _halusMilestones.isEmpty) ...[
-                  const SizedBox(height: 40),
-                  Center(child: Column(children: [
-                    Icon(Icons.info_outline, size: 48, color: AppColors.textMuted.withValues(alpha: 0.4)),
-                    const SizedBox(height: 12),
-                    Text('Belum ada milestone untuk usia ini', style: GoogleFonts.nunito(fontSize: 14, color: AppColors.textMuted)),
-                  ])),
+                  if (_kasarMilestones.isEmpty && _halusMilestones.isEmpty) ...[
+                    const SizedBox(height: 40),
+                    Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.info_outline, size: 48, color: AppColors.textMuted.withValues(alpha: 0.4)),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Belum ada milestone untuk usia ini',
+                            style: GoogleFonts.nunito(fontSize: 14, color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ]),
+              ),
             ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class CustomProgressBar extends StatelessWidget {
@@ -19,7 +20,7 @@ class CustomProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final barColor = color ?? AppColors.primary;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -27,24 +28,24 @@ class CustomProgressBar extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 16, color: barColor),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
               ],
               Expanded(
-                child: Text(label, style: TextStyle(
+                child: Text(label, style: GoogleFonts.nunito(
                   fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark,
                 )),
               ),
-              Text('${percentage.toInt()}%', style: TextStyle(
+              Text('${percentage.toInt()}%', style: GoogleFonts.nunito(
                 fontSize: 12, fontWeight: FontWeight.w700, color: barColor,
               )),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: percentage / 100,
-              backgroundColor: barColor.withValues(alpha: 0.15),
+              backgroundColor: barColor.withValues(alpha: 0.12),
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
               minHeight: 8,
             ),

@@ -24,7 +24,10 @@ class _KognitifScreenState extends State<KognitifScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final arg = ModalRoute.of(context)?.settings.arguments;
-    if (arg is ChildProfile) { _child = arg; _loadData(); }
+    if (arg is ChildProfile) {
+      _child = arg;
+      _loadData();
+    }
   }
 
   Future<void> _loadData() async {
@@ -47,31 +50,103 @@ class _KognitifScreenState extends State<KognitifScreen> {
     });
   }
 
-  double get _progress => _milestones.isEmpty ? 0 : _achieved.where((id) => _milestones.any((m) => m.id == id)).length / _milestones.length * 100;
+  double get _progress => _milestones.isEmpty
+      ? 0
+      : _achieved.where((id) => _milestones.any((m) => m.id == id)).length / _milestones.length * 100;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgCream,
-      appBar: AppBar(backgroundColor: const Color(0xFF2196F3), foregroundColor: Colors.white,
-        title: Text('Kognitif', style: GoogleFonts.montserrat(fontWeight: FontWeight.w700)), elevation: 0),
-      body: _loading ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF2196F3).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
-                child: Row(children: [const Icon(Icons.child_care_rounded, color: Color(0xFF2196F3), size: 22), const SizedBox(width: 10),
-                  Text('${_child?.name ?? ''} • ${_child?.ageInMonths ?? 0} bulan', style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF2196F3)))])),
-              const SizedBox(height: 20),
-              Text('Perkembangan Kognitif', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              const SizedBox(height: 4),
-              Text('Kemampuan berpikir, belajar, dan memecahkan masalah', style: GoogleFonts.nunito(fontSize: 12, color: AppColors.textMuted)),
-              const SizedBox(height: 10),
-              CustomProgressBar(label: 'Progress', percentage: _progress, color: const Color(0xFF2196F3)),
-              const SizedBox(height: 8),
-              ..._milestones.map((m) => MilestoneChecklistItem(text: m.description, isChecked: _achieved.contains(m.id), onChanged: (_) => _toggle(m.id!))),
-              if (_milestones.isEmpty) ...[const SizedBox(height: 40), Center(child: Column(children: [
-                Icon(Icons.info_outline, size: 48, color: AppColors.textMuted.withValues(alpha: 0.4)), const SizedBox(height: 12),
-                Text('Belum ada milestone untuk usia ini', style: GoogleFonts.nunito(fontSize: 14, color: AppColors.textMuted))]))],
-            ])),
+      appBar: AppBar(
+        backgroundColor: AppColors.bgCream,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
+        title: Text(
+          'Kognitif',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.catKognitif.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.child_care_rounded, color: AppColors.catKognitif, size: 22),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${_child?.name ?? ''} • ${_child?.ageInMonths ?? 0} bulan',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.catKognitif,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Perkembangan Kognitif',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Kemampuan berpikir, belajar, dan memecahkan masalah',
+                    style: GoogleFonts.nunito(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomProgressBar(
+                    label: 'Progress',
+                    percentage: _progress,
+                    color: AppColors.catKognitif,
+                  ),
+                  const SizedBox(height: 16),
+                  ..._milestones.map((m) => MilestoneChecklistItem(
+                        text: m.description,
+                        isChecked: _achieved.contains(m.id),
+                        onChanged: (_) => _toggle(m.id!),
+                      )),
+                  if (_milestones.isEmpty) ...[
+                    const SizedBox(height: 40),
+                    Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.info_outline, size: 48, color: AppColors.textMuted.withValues(alpha: 0.4)),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Belum ada milestone untuk usia ini',
+                            style: GoogleFonts.nunito(fontSize: 14, color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }

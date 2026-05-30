@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class CustomNavbar extends StatelessWidget {
@@ -10,16 +11,18 @@ class CustomNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primaryDark,
-        borderRadius: BorderRadius.circular(30),
+        color: AppColors.bgWhite,
         boxShadow: [
-          BoxShadow(color: AppColors.primaryDark.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
+          BoxShadow(
+            color: AppColors.textDark.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
+      child: SafeArea(
+        top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
@@ -42,22 +45,36 @@ class CustomNavbar extends StatelessWidget {
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: isSelected ? 26 : 22),
+            Icon(
+              icon,
+              color: isSelected ? AppColors.primary : AppColors.navInactive,
+              size: isSelected ? 26 : 22,
+            ),
             const SizedBox(height: 4),
-            Text(label, style: TextStyle(
-              color: Colors.white,
-              fontSize: isSelected ? 11 : 10,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-            )),
+            Text(
+              label,
+              style: GoogleFonts.nunito(
+                color: isSelected ? AppColors.primary : AppColors.navInactive,
+                fontSize: isSelected ? 11 : 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Dot indicator for active item
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: isSelected ? 20 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
           ],
         ),
       ),

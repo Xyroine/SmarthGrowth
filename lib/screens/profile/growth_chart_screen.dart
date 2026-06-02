@@ -15,6 +15,7 @@ class GrowthChartScreen extends StatefulWidget {
 
 class _GrowthChartScreenState extends State<GrowthChartScreen> {
   final _db = DatabaseHelper();
+  List<ChildProfile> _children = [];
   ChildProfile? _child;
   List<GrowthRecord> _records = [];
   bool _loading = true;
@@ -30,13 +31,35 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('user_id');
     if (userId != null) {
-      final children = await _db.getChildren(userId);
-      if (children.isNotEmpty) {
-        _child = children.first;
+      final selectedChildId = prefs.getInt('selected_child_id');
+      _children = await _db.getChildren(userId);
+      if (_children.isNotEmpty) {
+        if (selectedChildId != null) {
+          _child = _children.firstWhere(
+            (c) => c.id == selectedChildId,
+            orElse: () => _children.first,
+          );
+        } else {
+          _child = _children.first;
+        }
         _records = await _db.getGrowthRecords(_child!.id!);
       }
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _switchChild(ChildProfile child) async {
+    if (_child?.id == child.id) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selected_child_id', child.id!);
+    setState(() {
+      _child = child;
+      _loading = true;
+    });
+    _records = await _db.getGrowthRecords(child.id!);
+    setState(() {
+      _loading = false;
+    });
   }
 
   @override
@@ -74,14 +97,19 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
                         children: [
                           const Icon(Icons.child_care_rounded, color: AppColors.primary, size: 22),
                           const SizedBox(width: 10),
-                          Text(
-                            '${_child!.name} • ${_child!.shortAgeString}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                          Expanded(
+                            child: Text(
+                              '${_child!.name} • ${_child!.shortAgeString}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (_children.length > 1)
+                            _buildChildDropdown(),
                         ],
                       ),
                     ),
@@ -422,5 +450,75 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
       setState(() => _loading = true);
       _loadData();
     }
+  }
+
+  Widget _buildChildDropdown() {
+    return PopupMenuButton<ChildProfile>(
+      onSelected: _switchChild,
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.swap_horiz_rounded, size: 16, color: AppColors.primary),
+            const SizedBox(width: 4),
+            Text(
+              'Ganti',
+              style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (_) => _children.map((child) {
+        final isBoy = child.gender == 'Laki-laki';
+        final isSelected = _child?.id == child.id;
+        return PopupMenuItem<ChildProfile>(
+          value: child,
+          child: Row(
+            children: [
+              Icon(
+                isBoy ? Icons.boy_rounded : Icons.girl_rounded,
+                size: 22,
+                color: isBoy ? const Color(0xFF42A5F5) : const Color(0xFFEC407A),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  child.name,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? AppColors.primary : AppColors.textDark,
+                  ),
+                ),
+              ),
+              Text(
+                '${child.ageInMonths} bln',
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.primary),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 }

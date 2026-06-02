@@ -6,13 +6,22 @@ import '../../database/database_helper.dart';
 import '../../models/child_profile.dart';
 
 class MonitoringScreen extends StatefulWidget {
-  const MonitoringScreen({super.key});
+  final int? selectedChildId;
+  final ValueChanged<int?>? onChildChanged;
+
+  const MonitoringScreen({
+    super.key,
+    this.selectedChildId,
+    this.onChildChanged,
+  });
+
   @override
   State<MonitoringScreen> createState() => _MonitoringScreenState();
 }
 
 class _MonitoringScreenState extends State<MonitoringScreen> {
   final _db = DatabaseHelper();
+  List<ChildProfile> _children = [];
   ChildProfile? _child;
   bool _loading = true;
 
@@ -50,17 +59,57 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   @override
   void initState() {
     super.initState();
-    _loadChild();
+    _loadData();
   }
 
-  Future<void> _loadChild() async {
+  @override
+  void didUpdateWidget(covariant MonitoringScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedChildId != oldWidget.selectedChildId && widget.selectedChildId != _child?.id) {
+      setState(() => _loading = true);
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('user_id');
     if (userId != null) {
-      final children = await _db.getChildren(userId);
-      if (children.isNotEmpty) _child = children.first;
+      _children = await _db.getChildren(userId);
+      final selectedChildId = widget.selectedChildId ?? prefs.getInt('selected_child_id');
+      if (_children.isNotEmpty) {
+        if (selectedChildId != null) {
+          _child = _children.firstWhere(
+            (c) => c.id == selectedChildId,
+            orElse: () => _children.first,
+          );
+        } else {
+          _child = _children.first;
+        }
+        if (_child?.id != null) {
+          await prefs.setInt('selected_child_id', _child!.id!);
+          if (_child!.id != widget.selectedChildId) {
+            widget.onChildChanged?.call(_child!.id);
+          }
+        }
+      } else {
+        _child = null;
+        if (widget.selectedChildId != null) {
+          widget.onChildChanged?.call(null);
+        }
+      }
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _switchChild(ChildProfile child) async {
+    if (_child?.id == child.id) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selected_child_id', child.id!);
+    setState(() {
+      _child = child;
+    });
+    widget.onChildChanged?.call(child.id);
   }
 
   @override
@@ -71,7 +120,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header (Sage pastel card with radius 24)
+          // Header card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -107,40 +156,49 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                             )
                           ],
                         ),
-                        child: ClipOval(
-                          child: Image.asset(
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppColors.bgWhite,
+                          child: Icon(
                             _child!.gender == 'Perempuan'
-                                ? 'assets/images/girl_avatar.png'
-                                : 'assets/images/boy_avatar.png',
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
+                                ? Icons.girl_rounded
+                                : Icons.boy_rounded,
+                            size: 26,
+                            color: _child!.gender == 'Perempuan'
+                                ? const Color(0xFFEC407A)
+                                : const Color(0xFF42A5F5),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _child!.name,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textDark,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _child!.name,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textDark,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Usia: ${_child!.ageInMonths} bulan',
-                            style: GoogleFonts.nunito(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textMuted,
+                            const SizedBox(height: 2),
+                            Text(
+                              'Usia: ${_child!.ageInMonths} bulan',
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textMuted,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      // Child switcher dropdown if more than 1 child
+                      if (_children.length > 1)
+                        _buildChildDropdown(),
                     ],
                   ),
                 ] else ...[
@@ -169,7 +227,8 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                   ElevatedButton.icon(
                     onPressed: () async {
                       await Navigator.pushNamed(context, '/child_profile');
-                      _loadChild();
+                      setState(() => _loading = true);
+                      _loadData();
                     },
                     icon: const Icon(Icons.add, size: 18),
                     label: Text('Tambah Anak', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
@@ -198,14 +257,14 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 1.1,
+                childAspectRatio: 1.05,
               ),
               itemCount: _categories.length,
               itemBuilder: (_, i) => _buildCategoryCard(_categories[i]),
             ),
             const SizedBox(height: 24),
 
-            // Info box (White card with subtle shadow and Sage/Forest Green border/theme)
+            // Info box
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -258,6 +317,77 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     );
   }
 
+  /// Dropdown button to switch between children in monitoring
+  Widget _buildChildDropdown() {
+    return PopupMenuButton<ChildProfile>(
+      onSelected: _switchChild,
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.swap_horiz_rounded, size: 16, color: AppColors.primary),
+            const SizedBox(width: 4),
+            Text(
+              'Ganti',
+              style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (_) => _children.map((child) {
+        final isBoy = child.gender == 'Laki-laki';
+        final isSelected = _child?.id == child.id;
+        return PopupMenuItem<ChildProfile>(
+          value: child,
+          child: Row(
+            children: [
+              Icon(
+                isBoy ? Icons.boy_rounded : Icons.girl_rounded,
+                size: 22,
+                color: isBoy ? const Color(0xFF42A5F5) : const Color(0xFFEC407A),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  child.name,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? AppColors.primary : AppColors.textDark,
+                  ),
+                ),
+              ),
+              Text(
+                '${child.ageInMonths} bln',
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.primary),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildCategoryCard(Map<String, dynamic> cat) {
     final color = cat['color'] as Color;
     return GestureDetector(
@@ -288,26 +418,31 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
               ),
               child: Icon(cat['icon'] as IconData, color: AppColors.primary, size: 24),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  cat['title'] as String,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    cat['title'] as String,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  cat['desc'] as String,
-                  style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
+                  const SizedBox(height: 2),
+                  Text(
+                    cat['desc'] as String,
+                    style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

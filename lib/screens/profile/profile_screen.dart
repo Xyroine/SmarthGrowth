@@ -4,9 +4,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../database/database_helper.dart';
 import '../../models/user.dart';
+import '../../models/child_profile.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final int? selectedChildId;
+  final ValueChanged<int?>? onChildChanged;
+
+  const ProfileScreen({
+    super.key,
+    this.selectedChildId,
+    this.onChildChanged,
+  });
+
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -14,18 +23,31 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _db = DatabaseHelper();
   AppUser? _user;
+  List<ChildProfile> _children = [];
   bool _loading = true;
+
+  @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedChildId != oldWidget.selectedChildId) {
+      setState(() => _loading = true);
+      _loadData();
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadData();
   }
 
-  Future<void> _loadUser() async {
+  Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('user_id');
-    if (userId != null) _user = await _db.getUserById(userId);
+    if (userId != null) {
+      _user = await _db.getUserById(userId);
+      _children = await _db.getChildren(userId);
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -87,10 +109,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 24),
 
+          // Profil Anak section — show all children
+          _buildChildrenSection(),
+          const SizedBox(height: 16),
+
           // Menu items
           _buildSection('Akun', [
             _menuItem(Icons.person_outline_rounded, 'Informasi Akun', () {}),
-            _menuItem(Icons.child_care_rounded, 'Profil Anak', () => Navigator.pushNamed(context, '/child_profile')),
             _menuItem(Icons.show_chart_rounded, 'Grafik Pertumbuhan', () => Navigator.pushNamed(context, '/growth_chart')),
           ]),
           const SizedBox(height: 16),
@@ -129,6 +154,227 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text('SDG 3 & SDG 4', style: GoogleFonts.nunito(fontSize: 10, color: AppColors.textMuted)),
         ],
       ),
+    );
+  }
+
+  /// Section that displays all registered children with edit & add functionality
+  Widget _buildChildrenSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Profil Anak',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  final result = await Navigator.pushNamed(context, '/child_profile');
+                  if (result == true) {
+                    final prefs = await SharedPreferences.getInstance();
+                    final currentSelectedId = prefs.getInt('selected_child_id');
+                    widget.onChildChanged?.call(currentSelectedId);
+                  }
+                  setState(() => _loading = true);
+                  _loadData();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tambah',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_children.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.textDark.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.child_care_rounded, size: 40, color: AppColors.textMuted.withValues(alpha: 0.4)),
+                const SizedBox(height: 8),
+                Text(
+                  'Belum ada data anak',
+                  style: GoogleFonts.nunito(fontSize: 13, color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.pushNamed(context, '/child_profile');
+                    setState(() => _loading = true);
+                    _loadData();
+                  },
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: Text('Tambah Anak', style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.textDark.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Column(
+              children: _children.asMap().entries.map((entry) {
+                final index = entry.key;
+                final child = entry.value;
+                final isBoy = child.gender == 'Laki-laki';
+                final avatarColor = isBoy ? const Color(0xFF42A5F5) : const Color(0xFFEC407A);
+                final isSelected = widget.selectedChildId == child.id;
+
+                return Column(
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      tileColor: isSelected ? AppColors.primary.withValues(alpha: 0.05) : null,
+                      leading: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: avatarColor.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: avatarColor.withValues(alpha: 0.3), width: 1.5),
+                        ),
+                        child: Icon(
+                          isBoy ? Icons.boy_rounded : Icons.girl_rounded,
+                          color: avatarColor,
+                          size: 26,
+                        ),
+                      ),
+                      title: Text(
+                        child.name,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${child.shortAgeString} • ${child.gender}',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSelected) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Aktif',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          // Weight/height badge
+                          if (child.weight != null && child.height != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${child.weight?.toStringAsFixed(1)} kg',
+                                style: GoogleFonts.nunito(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 22),
+                        ],
+                      ),
+                      onTap: () async {
+                        final result = await Navigator.pushNamed(context, '/child_profile', arguments: child);
+                        if (result == true) {
+                          final prefs = await SharedPreferences.getInstance();
+                          final currentSelectedId = prefs.getInt('selected_child_id');
+                          widget.onChildChanged?.call(currentSelectedId);
+                        }
+                        setState(() => _loading = true);
+                        _loadData();
+                      },
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    if (index < _children.length - 1)
+                      Divider(
+                        height: 1,
+                        indent: 72,
+                        endIndent: 16,
+                        color: AppColors.divider.withValues(alpha: 0.5),
+                      ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+      ],
     );
   }
 
@@ -247,6 +493,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (confirm == true) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('user_id');
+      await prefs.remove('selected_child_id');
+      widget.onChildChanged?.call(null);
       if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/login', (r) => false);
     }
   }

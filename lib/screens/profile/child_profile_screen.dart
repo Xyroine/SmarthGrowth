@@ -182,6 +182,28 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
                         ),
                 ),
               ),
+              if (_existing != null) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : _delete,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(
+                      'Hapus Profil Anak',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -277,6 +299,53 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     if (d != null) setState(() => _birthDate = d);
   }
 
+  Future<void> _delete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgCream,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Hapus Data Anak?',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18, color: AppColors.textDark),
+        ),
+        content: Text(
+          'Data "${_existing!.name}" beserta semua riwayat milestone dan pertumbuhan akan dihapus secara permanen.',
+          style: GoogleFonts.nunito(fontSize: 14, color: AppColors.textMuted, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal', style: GoogleFonts.nunito(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Hapus', style: GoogleFonts.nunito(color: Colors.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      final db = DatabaseHelper();
+      await db.deleteChild(_existing!.id!);
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getInt('selected_child_id') == _existing!.id) {
+        await prefs.remove('selected_child_id');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Data anak berhasil dihapus'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+        Navigator.pop(context, true);
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -295,7 +364,9 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     if (_existing != null) {
       await db.updateChild(child);
     } else {
-      await db.insertChild(child);
+      final newId = await db.insertChild(child);
+      // Auto-select the newly created child
+      await prefs.setInt('selected_child_id', newId);
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

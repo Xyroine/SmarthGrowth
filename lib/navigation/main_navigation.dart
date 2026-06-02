@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/monitoring/monitoring_screen.dart';
 import '../screens/education/education_screen.dart';
@@ -15,18 +16,49 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
-
-  final _screens = const [
-    HomeScreen(),
-    MonitoringScreen(),
-    EducationScreen(),
-    ProfileScreen(),
-  ];
+  int? _selectedChildId;
 
   final _titles = ['Beranda', 'Monitoring', 'Edukasi', 'Profil'];
 
   @override
+  void initState() {
+    super.initState();
+    _loadSelectedChildId();
+  }
+
+  Future<void> _loadSelectedChildId() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _selectedChildId = prefs.getInt('selected_child_id');
+      });
+    }
+  }
+
+  void _handleChildChanged(int? childId) {
+    setState(() {
+      _selectedChildId = childId;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screens = [
+      HomeScreen(
+        selectedChildId: _selectedChildId,
+        onChildChanged: _handleChildChanged,
+      ),
+      MonitoringScreen(
+        selectedChildId: _selectedChildId,
+        onChildChanged: _handleChildChanged,
+      ),
+      const EducationScreen(),
+      ProfileScreen(
+        selectedChildId: _selectedChildId,
+        onChildChanged: _handleChildChanged,
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: AppColors.bgCream,
       appBar: _currentIndex == 0 
@@ -46,11 +78,14 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: CustomNavbar(
         currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+        onTap: (i) {
+          _loadSelectedChildId();
+          setState(() => _currentIndex = i);
+        },
       ),
     );
   }

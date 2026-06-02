@@ -107,6 +107,14 @@ class DatabaseHelper {
     return await db.update('children', child.toMap(), where: 'id = ?', whereArgs: [child.id]);
   }
 
+  Future<void> deleteChild(int childId) async {
+    final db = await database;
+    await db.delete('milestone_records', where: 'child_id = ?', whereArgs: [childId]);
+    await db.delete('growth_records', where: 'child_id = ?', whereArgs: [childId]);
+    await db.delete('reminders', where: 'child_id = ?', whereArgs: [childId]);
+    await db.delete('children', where: 'id = ?', whereArgs: [childId]);
+  }
+
   // MILESTONES
   Future<List<Milestone>> getMilestones(String category, int ageMonths) async {
     final db = await database;

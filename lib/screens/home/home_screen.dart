@@ -8,17 +8,30 @@ import '../../models/child_profile.dart';
 import '../../models/user.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int? selectedChildId;
+  final ValueChanged<int?>? onChildChanged;
+
+  const HomeScreen({
+    super.key,
+    this.selectedChildId,
+    this.onChildChanged,
+  });
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final _db = DatabaseHelper();
   AppUser? _user;
+  List<ChildProfile> _children = [];
   ChildProfile? _child;
   Map<String, double> _progress = {};
   bool _loading = true;
+
+  // Animation for child switch
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
 
   final _tips = [
     {'title': 'Ajak Bicara Si Kecil', 'desc': 'Berbicaralah sesering mungkin dengan anak, ini merangsang perkembangan bahasa mereka.', 'icon': Icons.record_voice_over_rounded},
@@ -27,7 +40,31 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
-  void initState() { super.initState(); _loadData(); }
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeInOut);
+    _fadeCtrl.value = 1.0;
+    _loadData();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedChildId != oldWidget.selectedChildId && widget.selectedChildId != _child?.id) {
+      setState(() => _loading = true);
+      _loadData();
+    }
+  }
+
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _loadData() async {
     try {
@@ -35,15 +72,92 @@ class _HomeScreenState extends State<HomeScreen> {
       final userId = prefs.getInt('user_id');
       if (userId == null) { if (mounted) setState(() => _loading = false); return; }
       _user = await _db.getUserById(userId);
-      final children = await _db.getChildren(userId);
-      if (children.isNotEmpty) {
-        _child = children.first;
-        _progress = await _db.getCategoryProgress(_child!.id!, _child!.ageInMonths);
+      _children = await _db.getChildren(userId);
+      if (_children.isNotEmpty) {
+        final selectedChildId = widget.selectedChildId ?? prefs.getInt('selected_child_id');
+        if (selectedChildId != null) {
+          _child = _children.firstWhere(
+            (c) => c.id == selectedChildId,
+            orElse: () => _children.first,
+          );
+        } else {
+          _child = _children.first;
+        }
+        if (_child?.id != null) {
+          await prefs.setInt('selected_child_id', _child!.id!);
+          // Sync with parent navigation
+          if (_child!.id != widget.selectedChildId) {
+            widget.onChildChanged?.call(_child!.id);
+          }
+          _progress = await _db.getCategoryProgress(_child!.id!, _child!.ageInMonths);
+        }
+      } else {
+        _child = null;
+        _progress = {};
+        if (widget.selectedChildId != null) {
+          widget.onChildChanged?.call(null);
+        }
       }
     } catch (e) {
-      debugPrint('HomeScreen DB error (web?): $e');
+      debugPrint('HomeScreen DB error: $e');
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _selectChild(ChildProfile child) async {
+    if (_child?.id == child.id) return;
+    // Fade out → switch → fade in
+    await _fadeCtrl.reverse();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selected_child_id', child.id!);
+    _child = child;
+    widget.onChildChanged?.call(child.id);
+    _progress = await _db.getCategoryProgress(child.id!, child.ageInMonths);
+    if (mounted) setState(() {});
+    await _fadeCtrl.forward();
+  }
+
+  Future<void> _deleteChild(ChildProfile child) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgCream,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Hapus Data Anak?',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18, color: AppColors.textDark),
+        ),
+        content: Text(
+          'Data "${child.name}" beserta semua riwayat milestone dan pertumbuhan akan dihapus secara permanen.',
+          style: GoogleFonts.nunito(fontSize: 14, color: AppColors.textMuted, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Batal', style: GoogleFonts.nunito(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Hapus', style: GoogleFonts.nunito(color: Colors.red, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _db.deleteChild(child.id!);
+      final prefs = await SharedPreferences.getInstance();
+      // If we deleted the selected child, clear selection
+      if (prefs.getInt('selected_child_id') == child.id) {
+        await prefs.remove('selected_child_id');
+        widget.onChildChanged?.call(null);
+      } else {
+        // Just trigger rebuild
+        widget.onChildChanged?.call(prefs.getInt('selected_child_id'));
+      }
+      setState(() => _loading = true);
+      await _loadData();
+    }
   }
 
   @override
@@ -66,44 +180,192 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Child profile card
-                      if (_child != null) _buildChildCard()
-                      else _buildAddChildCard(),
-                      const SizedBox(height: 24),
+                      // Child switcher (always show if there are children)
+                      if (_children.isNotEmpty) ...[
+                        _buildChildSwitcher(),
+                        const SizedBox(height: 20),
+                      ],
 
-                      // Progress section
-                      if (_child != null) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Child profile card with fade transition
+                      FadeTransition(
+                        opacity: _fadeAnim,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Progress terkini ${_child!.name.split(' ').first}',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            ),
-                            Text(
-                              'Detail ',
-                              style: GoogleFonts.nunito(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
-                            ),
+                            if (_child != null) _buildChildCard()
+                            else _buildAddChildCard(),
+                            const SizedBox(height: 24),
+
+                            // Progress section
+                            if (_child != null) ...[
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Progress terkini ${_child!.name.split(' ').first}',
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Detail ',
+                                    style: GoogleFonts.nunito(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildProgressCard(),
+                              const SizedBox(height: 24),
+
+                              // Daily Tips
+                              Text(
+                                'Tips Harian 💡',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                              ),
+                              const SizedBox(height: 16),
+                              ..._tips.map((tip) => _buildTipCard(tip)),
+                            ],
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        _buildProgressCard(),
-                        const SizedBox(height: 24),
-
-                        // Daily Tips
-                        Text(
-                          'Tips Harian 💡',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                        ),
-                        const SizedBox(height: 16),
-                        ..._tips.map((tip) => _buildTipCard(tip)),
-                      ],
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Horizontal child switcher with avatars + "Add" button
+  Widget _buildChildSwitcher() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Anak Saya',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 82,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _children.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              if (index == _children.length) {
+                return _buildAddChildChip();
+              }
+              return _buildChildChip(_children[index]);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChildChip(ChildProfile child) {
+    final isSelected = _child?.id == child.id;
+    final isBoy = child.gender == 'Laki-laki';
+    final avatarColor = isBoy ? const Color(0xFF42A5F5) : const Color(0xFFEC407A);
+
+    return GestureDetector(
+      onTap: () => _selectChild(child),
+      onLongPress: () => _deleteChild(child),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        width: 65,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? avatarColor.withValues(alpha: 0.15) : AppColors.bgWhite,
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.divider,
+                  width: isSelected ? 2.5 : 1.5,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        )
+                      ]
+                    : null,
+              ),
+              child: Icon(
+                isBoy ? Icons.boy_rounded : Icons.girl_rounded,
+                size: 28,
+                color: isSelected ? avatarColor : AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              child.name.split(' ').first,
+              style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? AppColors.textDark : AppColors.textMuted,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddChildChip() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.pushNamed(context, '/child_profile');
+        setState(() => _loading = true);
+        _loadData();
+      },
+      child: SizedBox(
+        width: 65,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(Icons.add_rounded, size: 24, color: AppColors.primary),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Tambah',
+              style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -127,19 +389,24 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Image.asset('assets/images/logoo_1.png', width: 37, height: 30),
-              const SizedBox(width: 12),
-              Text(
-                'Halo, ${_user?.name ?? 'Ibundaa'}!',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
+          Expanded(
+            child: Row(
+              children: [
+                Image.asset('assets/images/logoo_1.png', width: 37, height: 30),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Halo, ${_user?.name ?? 'Ibundaa'}!',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           Container(
             width: 40,
@@ -156,6 +423,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChildCard() {
+    final isBoy = _child!.gender == 'Laki-laki';
+    final giziStatus = _child!.nutritionStatus;
+    final giziColor = _getGiziColor(giziStatus);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -169,7 +440,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Foto profil — lingkaran sempurna + stroke putih 2px
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -185,8 +455,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CircleAvatar(
                   radius: 32,
                   backgroundColor: AppColors.bgWhite,
-                  child: ClipOval(
-                    child: Image.asset('assets/images/boy_avatar.png', width: 60, height: 60, fit: BoxFit.cover),
+                  child: Icon(
+                    isBoy ? Icons.boy_rounded : Icons.girl_rounded,
+                    size: 40,
+                    color: isBoy ? const Color(0xFF42A5F5) : const Color(0xFFEC407A),
                   ),
                 ),
               ),
@@ -202,16 +474,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontWeight: FontWeight.w600,
                         color: AppColors.textDark,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text(
-                          _child!.shortAgeString,
-                          style: GoogleFonts.nunito(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textDark,
+                        Flexible(
+                          child: Text(
+                            _child!.shortAgeString,
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textDark,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -227,15 +503,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Cek Terakhir : 15 hari lalu',
-                      style: GoogleFonts.nunito(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
-                      ),
                     ),
                   ],
                 ),
@@ -261,10 +528,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _infoItem('BB', '${_child!.weight?.toStringAsFixed(1) ?? '-'} Kg'),
-                    const SizedBox(width: 16),
+                    Container(width: 1, height: 30, color: AppColors.divider.withValues(alpha: 0.3)),
                     _infoItem('TB', '${_child!.height?.toStringAsFixed(1) ?? '-'} cm'),
-                    const SizedBox(width: 16),
-                    _giziBadge(_child!.nutritionStatus),
+                    Container(width: 1, height: 30, color: AppColors.divider.withValues(alpha: 0.3)),
+                    _giziBadge(giziStatus, giziColor),
                   ],
                 ),
               ),
@@ -273,6 +540,32 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Color _getGiziColor(String status) {
+    switch (status) {
+      case 'Gizi Baik':
+        return const Color(0xFF2D6A4F);
+      case 'Gizi Kurang':
+        return const Color(0xFFE65100);
+      case 'Gizi Lebih':
+        return const Color(0xFFD84315);
+      default:
+        return AppColors.textMuted;
+    }
+  }
+
+  Color _getGiziBgColor(String status) {
+    switch (status) {
+      case 'Gizi Baik':
+        return const Color(0xFFE8F5E9);
+      case 'Gizi Kurang':
+        return const Color(0xFFFFF3E0);
+      case 'Gizi Lebih':
+        return const Color(0xFFFFEBEE);
+      default:
+        return AppColors.secondary;
+    }
   }
 
   Widget _infoItem(String label, String value) {
@@ -285,12 +578,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Badge kecil melayang untuk status gizi
-  Widget _giziBadge(String status) {
+  Widget _giziBadge(String status, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
+        color: _getGiziBgColor(status),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -298,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> {
         style: GoogleFonts.nunito(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: AppColors.primary,
+          color: color,
         ),
       ),
     );
@@ -308,6 +600,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         await Navigator.pushNamed(context, '/child_profile');
+        setState(() => _loading = true);
         _loadData();
       },
       child: Container(
@@ -348,13 +641,13 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          _buildProgressRow('Motorik', _progress['motorik'] ?? 80, AppColors.primary),
+          _buildProgressRow('Motorik', _progress['motorik'] ?? 0, AppColors.primary),
           const SizedBox(height: 16),
-          _buildProgressRow('Kognitif', _progress['kognitif'] ?? 50, AppColors.catKognitif),
+          _buildProgressRow('Kognitif', _progress['kognitif'] ?? 0, AppColors.catKognitif),
           const SizedBox(height: 16),
-          _buildProgressRow('Bahasa', _progress['bahasa'] ?? 65, AppColors.catBahasa),
+          _buildProgressRow('Bahasa', _progress['bahasa'] ?? 0, AppColors.catBahasa),
           const SizedBox(height: 16),
-          _buildProgressRow('Sosial & Emosional', _progress['sosial_emosional'] ?? 95, AppColors.catEmosional),
+          _buildProgressRow('Sosial & Emosional', _progress['sosial_emosional'] ?? 0, AppColors.catEmosional),
         ],
       ),
     );
@@ -367,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            Expanded(child: Text(label, style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark))),
             Text('${percentage.toInt()}%', style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
           ],
         ),
@@ -378,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: percentage / 100.0,
+            widthFactor: (percentage / 100.0).clamp(0.0, 1.0),
             child: Container(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20))),
           ),
         ),

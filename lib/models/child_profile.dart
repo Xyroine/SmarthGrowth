@@ -49,14 +49,44 @@ class ChildProfile {
     return '$remainingMonths Bulan';
   }
 
+  /// WHO weight-for-age median (kg) by age in months (0–24).
+  /// Source: WHO Child Growth Standards (simplified median for boys/girls avg).
+  static const List<double> _whoWeightMedian = [
+    3.3,  // 0 months
+    4.5,  // 1
+    5.6,  // 2
+    6.4,  // 3
+    7.0,  // 4
+    7.5,  // 5
+    7.9,  // 6
+    8.3,  // 7
+    8.6,  // 8
+    8.9,  // 9
+    9.2,  // 10
+    9.4,  // 11
+    9.6,  // 12
+    9.9,  // 13
+    10.1, // 14
+    10.3, // 15
+    10.5, // 16
+    10.7, // 17
+    10.9, // 18
+    11.1, // 19
+    11.3, // 20
+    11.5, // 21
+    11.8, // 22
+    12.0, // 23
+    12.2, // 24
+  ];
+
   String get nutritionStatus {
-    if (weight == null || height == null) return 'Belum diukur';
-    // Simple BMI-based classification for children
-    final heightInM = height! / 100;
-    final bmi = weight! / (heightInM * heightInM);
-    if (bmi < 14) return 'Gizi Kurang';
-    if (bmi < 18) return 'Gizi Baik';
-    return 'Gizi Lebih';
+    if (weight == null) return 'Belum diukur';
+    final months = ageInMonths.clamp(0, 24);
+    final median = _whoWeightMedian[months];
+    // WHO z-score approximation: ≤ -2 SD ≈ < 80% median, ≥ +2 SD ≈ > 120% median
+    if (weight! < median * 0.80) return 'Gizi Kurang';
+    if (weight! > median * 1.20) return 'Gizi Lebih';
+    return 'Gizi Baik';
   }
 
   Map<String, dynamic> toMap() {

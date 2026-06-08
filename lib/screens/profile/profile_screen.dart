@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -80,10 +81,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       )
                     ],
                   ),
-                  child: const CircleAvatar(
+                  child: CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.person_rounded, size: 45, color: AppColors.primary),
+                    backgroundImage: _user?.photoPath != null && _user!.photoPath!.isNotEmpty
+                        ? FileImage(File(_user!.photoPath!))
+                        : null,
+                    child: _user?.photoPath == null || _user!.photoPath!.isEmpty
+                        ? const Icon(Icons.person_rounded, size: 45, color: AppColors.primary)
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -115,7 +121,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Menu items
           _buildSection('Akun', [
-            _menuItem(Icons.person_outline_rounded, 'Informasi Akun', () {}),
+            _menuItem(Icons.person_outline_rounded, 'Informasi Akun', () async {
+              final result = await Navigator.pushNamed(context, '/mother_profile');
+              if (result == true) {
+                setState(() => _loading = true);
+                _loadData();
+              }
+            }),
             _menuItem(Icons.show_chart_rounded, 'Grafik Pertumbuhan', () => Navigator.pushNamed(context, '/growth_chart')),
           ]),
           const SizedBox(height: 16),
@@ -125,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ]),
           const SizedBox(height: 16),
           _buildSection('Pengaturan', [
-            _menuItem(Icons.notifications_outlined, 'Notifikasi', () {}),
+            _menuItem(Icons.notifications_outlined, 'Pengingat', () => Navigator.pushNamed(context, '/reminder')),
             _menuItem(Icons.language_rounded, 'Bahasa', () {}),
             _menuItem(Icons.help_outline_rounded, 'Bantuan', () {}),
             _menuItem(Icons.info_outline_rounded, 'Tentang Aplikasi', () => _showAbout()),
@@ -287,11 +299,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: avatarColor.withValues(alpha: 0.3), width: 1.5),
                         ),
-                        child: Icon(
-                          isBoy ? Icons.boy_rounded : Icons.girl_rounded,
-                          color: avatarColor,
-                          size: 26,
-                        ),
+                        child: child.photoPath != null && child.photoPath!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.file(
+                                  File(child.photoPath!),
+                                  width: 44,
+                                  height: 44,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Icon(
+                                isBoy ? Icons.boy_rounded : Icons.girl_rounded,
+                                color: avatarColor,
+                                size: 26,
+                              ),
                       ),
                       title: Text(
                         child.name,

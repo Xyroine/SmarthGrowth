@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../database/database_helper.dart';
 import '../../models/child_profile.dart';
 import '../../models/growth_record.dart';
+import '../../services/pdf_service.dart';
 
 class GrowthChartScreen extends StatefulWidget {
   const GrowthChartScreen({super.key});
@@ -78,6 +80,13 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
             color: AppColors.textDark,
           ),
         ),
+        actions: [
+          if (_child != null)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.primary),
+              onPressed: () => PdfService.generateGrowthReport(_child!, _records),
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
@@ -95,7 +104,17 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.child_care_rounded, color: AppColors.primary, size: 22),
+                          if (_child!.photoPath != null && _child!.photoPath!.isNotEmpty)
+                            ClipOval(
+                              child: Image.file(
+                                File(_child!.photoPath!),
+                                width: 26,
+                                height: 26,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          else
+                            const Icon(Icons.child_care_rounded, color: AppColors.primary, size: 26),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -301,43 +320,86 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
     );
   }
 
-  LineChartData _buildChart() {
-    final spots = _records
-        .asMap()
-        .entries
-        .map((e) => FlSpot(e.key.toDouble(), _showWeight ? e.value.weight : e.value.height))
-        .toList();
+  int _getAgeInMonths(DateTime recordDate) {
+    if (_child == null) return 0;
+    int months = (recordDate.year - _child!.birthDate.year) * 12 + (recordDate.month - _child!.birthDate.month);
+    if (recordDate.day < _child!.birthDate.day) months--;
+    return months < 0 ? 0 : months;
+  }
 
-    // Weight curve is Soft Sage Green, Height curve is Soft Blue Pastel with shadow
+  // Simplified WHO medians for 0-24 months
+  final List<double> _whoWeightMedian = [
+    3.3, 4.5, 5.6, 6.4, 7.0, 7.5, 7.9, 8.3, 8.6, 8.9, 9.2, 9.4, 9.6, 9.9, 10.1, 10.3, 10.5, 10.7, 10.9, 11.1, 11.3, 11.5, 11.8, 12.0, 12.2
+  ];
+  final List<double> _whoHeightMedian = [
+    49.9, 54.7, 58.4, 61.4, 63.9, 65.9, 67.6, 69.2, 70.6, 72.0, 73.3, 74.5, 75.7, 76.9, 78.0, 79.1, 80.2, 81.2, 82.3, 83.2, 84.2, 85.1, 86.0, 86.9, 87.8
+  ];
+
+  LineChartData _buildChart() {
+    if (_child == null) return LineChartData();
+
+    // Sort records by date just to be sure
+    final sortedRecords = List<GrowthRecord>.from(_records)
+      ..sort((a, b) => a.recordDate.compareTo(b.recordDate));
+
+    final spots = sortedRecords.map((r) {
+      final months = _getAgeInMonths(r.recordDate);
+      return FlSpot(months.toDouble(), _showWeight ? r.weight : r.height);
+    }).toList();
+
+    // Calculate max X (age in months)
+    double maxX = 24.0; // Default max is 2 years
+    if (spots.isNotEmpty && spots.last.x > maxX) {
+      maxX = spots.last.x + 2;
+    }
+
+    // Reference WHO curve
+    final List<FlSpot> whoSpots = [];
+    final limit = maxX > 24 ? 24 : maxX.toInt();
+    for (int i = 0; i <= limit; i++) {
+      whoSpots.add(FlSpot(i.toDouble(), _showWeight ? _whoWeightMedian[i] : _whoHeightMedian[i]));
+    }
+
     final color = _showWeight ? const Color(0xFF52B788) : const Color(0xFF70A1FF);
+    final refColor = Colors.orangeAccent.withValues(alpha: 0.8);
 
     return LineChartData(
       gridData: FlGridData(
         show: true,
-        drawVerticalLine: false,
+        drawVerticalLine: true,
         horizontalInterval: _showWeight ? 2 : 10,
+        verticalInterval: 2,
         getDrawingHorizontalLine: (_) => FlLine(
           color: AppColors.divider.withValues(alpha: 0.4),
           strokeWidth: 1,
+        ),
+        getDrawingVerticalLine: (_) => FlLine(
+          color: AppColors.divider.withValues(alpha: 0.2),
+          strokeWidth: 1,
+          dashArray: [4, 4],
         ),
       ),
       titlesData: FlTitlesData(
         rightTitles: const AxisTitles(),
         topTitles: const AxisTitles(),
         bottomTitles: AxisTitles(
+          axisNameWidget: Text('Usia (Bulan)', style: GoogleFonts.nunito(fontSize: 10, color: AppColors.textMuted)),
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 30,
+            reservedSize: 26,
+            interval: 2,
             getTitlesWidget: (v, _) => Text(
-              '${v.toInt() + 1}',
+              v.toInt().toString(),
               style: GoogleFonts.nunito(fontSize: 10, color: AppColors.textMuted),
             ),
           ),
         ),
         leftTitles: AxisTitles(
+          axisNameWidget: Text(_showWeight ? 'Berat (kg)' : 'Tinggi (cm)', style: GoogleFonts.nunito(fontSize: 10, color: AppColors.textMuted)),
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 40,
+            reservedSize: 32,
+            interval: _showWeight ? 2 : 10,
             getTitlesWidget: (v, _) => Text(
               v.toStringAsFixed(0),
               style: GoogleFonts.nunito(fontSize: 10, color: AppColors.textMuted),
@@ -346,7 +408,20 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
         ),
       ),
       borderData: FlBorderData(show: false),
+      minX: 0,
+      maxX: maxX,
       lineBarsData: [
+        // WHO Reference Curve
+        LineChartBarData(
+          spots: whoSpots,
+          isCurved: true,
+          color: refColor,
+          barWidth: 2,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(show: false),
+          dashArray: [5, 5],
+        ),
+        // Actual Data Curve
         LineChartBarData(
           spots: spots,
           isCurved: true,
@@ -360,18 +435,35 @@ class _GrowthChartScreenState extends State<GrowthChartScreen> {
           dotData: FlDotData(
             show: true,
             getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
-              radius: 6,
+              radius: 5,
               color: color,
-              strokeWidth: 3,
+              strokeWidth: 2,
               strokeColor: Colors.white,
             ),
           ),
           belowBarData: BarAreaData(
             show: true,
-            color: color.withValues(alpha: 0.08),
+            color: color.withValues(alpha: 0.1),
           ),
         ),
       ],
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipItems: (touchedSpots) {
+            return touchedSpots.map((spot) {
+              final isRef = spot.barIndex == 0;
+              return LineTooltipItem(
+                isRef ? 'WHO: ${spot.y.toStringAsFixed(1)}' : spot.y.toStringAsFixed(1),
+                GoogleFonts.nunito(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              );
+            }).toList();
+          },
+        ),
+      ),
     );
   }
 

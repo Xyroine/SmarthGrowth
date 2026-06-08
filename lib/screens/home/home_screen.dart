@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
@@ -34,9 +35,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late Animation<double> _fadeAnim;
 
   final _tips = [
-    {'title': 'Ajak Bicara Si Kecil', 'desc': 'Berbicaralah sesering mungkin dengan anak, ini merangsang perkembangan bahasa mereka.', 'icon': Icons.record_voice_over_rounded},
-    {'title': 'Waktu Bermain', 'desc': 'Luangkan 15-30 menit bermain bersama anak setiap hari untuk mempererat bonding.', 'icon': Icons.toys_rounded},
-    {'title': 'Tummy Time', 'desc': 'Letakkan bayi tengkurap 3-5 menit beberapa kali sehari untuk melatih otot leher.', 'icon': Icons.child_care_rounded},
+    {
+      'title': 'Ajak Bicara Si Kecil',
+      'desc': 'Berbicaralah sesering mungkin dengan anak, ini merangsang perkembangan bahasa mereka.',
+      'icon': Icons.record_voice_over_rounded,
+      'category': 'Bahasa',
+      'details': 'Mengajak anak bicara sejak dini sangat krusial bagi perkembangan sel-sel otak mereka, khususnya di area bahasa.\n\n'
+          '💡 Cara Melakukannya:\n'
+          '• Sebutkan nama-nama benda yang sedang Anda atau anak pegang.\n'
+          '• Gunakan bahasa yang jelas (hindari bahasa bayi yang dicadangkan).\n'
+          '• Respon ocehan atau tanggapan anak dengan senyuman dan jawaban.\n'
+          '• Bacakan buku cerita sederhana dengan intonasi yang menarik.'
+    },
+    {
+      'title': 'Waktu Bermain',
+      'desc': 'Luangkan 15-30 menit bermain bersama anak setiap hari untuk mempererat bonding.',
+      'icon': Icons.toys_rounded,
+      'category': 'Sosial & Emosional',
+      'details': 'Waktu bermain tanpa distraksi (gadget/kerjaan) adalah investasi emosional terbaik bagi buah hati Anda.\n\n'
+          '💡 Cara Melakukannya:\n'
+          '• Cari tempat yang tenang dan biarkan anak memimpin permainan.\n'
+          '• Lakukan kontak mata dan ekspresikan kegembiraan.\n'
+          '• Berikan pujian saat anak berhasil melakukan sesuatu.\n'
+          '• Bermainlah secara fisik seperti cilukba atau merangkak bersama.'
+    },
+    {
+      'title': 'Tummy Time',
+      'desc': 'Letakkan bayi tengkurap 3-5 menit beberapa kali sehari untuk melatih otot leher.',
+      'icon': Icons.child_care_rounded,
+      'category': 'Motorik',
+      'details': 'Tummy time melatih kekuatan otot leher, bahu, dan lengan bayi yang penting untuk tahap merangkak dan duduk nanti.\n\n'
+          '💡 Cara Melakukannya:\n'
+          '• Letakkan bayi tengkurap di atas permukaan datar yang aman dan beralas nyaman.\n'
+          '• Lakukan tummy time saat bayi sedang terjaga dan tidak dalam keadaan kenyang.\n'
+          '• Berinteraksilah dengan bayi dari depan menggunakan mainan berbunyi agar ia mendongak.\n'
+          '• Hentikan jika bayi mulai menangis atau terlihat lelah.'
+    },
   ];
 
   @override
@@ -308,11 +342,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ]
                     : null,
               ),
-              child: Icon(
-                isBoy ? Icons.boy_rounded : Icons.girl_rounded,
-                size: 28,
-                color: isSelected ? avatarColor : AppColors.textMuted,
-              ),
+              child: child.photoPath != null && child.photoPath!.isNotEmpty
+                  ? ClipOval(
+                      child: Image.file(
+                        File(child.photoPath!),
+                        fit: BoxFit.cover,
+                        width: 50,
+                        height: 50,
+                      ),
+                    )
+                  : Icon(
+                      isBoy ? Icons.boy_rounded : Icons.girl_rounded,
+                      size: 28,
+                      color: isSelected ? avatarColor : AppColors.textMuted,
+                    ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -679,27 +722,176 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _showTipDetails(Map<String, dynamic> tip) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.bgCream,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      tip['icon'] as IconData,
+                      color: AppColors.primary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tip['category'] as String? ?? 'Tips',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          tip['title'] as String,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Divider(color: AppColors.divider.withValues(alpha: 0.5)),
+              const SizedBox(height: 16),
+              Text(
+                tip['desc'] as String,
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (tip['details'] != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgWhite,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.textDark.withValues(alpha: 0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    tip['details'] as String,
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      color: AppColors.textDark,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    'Mengerti',
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildTipCard(Map<String, dynamic> tip) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: AppColors.textDark.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(children: [
-        Container(
-          width: 48, height: 48,
-          decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(14)),
-          child: Icon(tip['icon'] as IconData, color: AppColors.primary, size: 24),
+    return GestureDetector(
+      onTap: () => _showTipDetails(tip),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white, borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: AppColors.textDark.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        const SizedBox(width: 16),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(tip['title'] as String, style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 4),
-          Text(tip['desc'] as String, style: GoogleFonts.nunito(fontSize: 12, color: AppColors.textMuted, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
-        ])),
-      ]),
+        child: Row(children: [
+          Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(14)),
+            child: Icon(tip['icon'] as IconData, color: AppColors.primary, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(tip['title'] as String, style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            const SizedBox(height: 4),
+            Text(tip['desc'] as String, style: GoogleFonts.nunito(fontSize: 12, color: AppColors.textMuted, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ])),
+        ]),
+      ),
     );
   }
 }

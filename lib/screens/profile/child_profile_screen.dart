@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../database/database_helper.dart';
 import '../../models/child_profile.dart';
@@ -23,6 +25,9 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   bool _isLoading = false;
   bool _initialized = false;
 
+  final ImagePicker _picker = ImagePicker();
+  File? _imageFile;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -36,7 +41,47 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
       _birthDate = arg.birthDate;
       _weightCtrl.text = arg.weight?.toString() ?? '';
       _heightCtrl.text = arg.height?.toString() ?? '';
+      if (arg.photoPath != null && arg.photoPath!.isNotEmpty) {
+        final f = File(arg.photoPath!);
+        if (f.existsSync()) _imageFile = f;
+      }
     }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(source: source, maxWidth: 800);
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking image: $e");
+    }
+  }
+
+  void _showPickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+              title: Text('Pilih dari Galeri', style: GoogleFonts.nunito(fontWeight: FontWeight.w600)),
+              onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded, color: AppColors.primary),
+              title: Text('Ambil dari Kamera', style: GoogleFonts.nunito(fontWeight: FontWeight.w600)),
+              onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -65,27 +110,54 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.textDark.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppColors.secondary,
-                    child: Icon(
-                      _gender == 'Laki-laki' ? Icons.boy_rounded : Icons.girl_rounded,
-                      size: 55,
-                      color: AppColors.primary,
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.textDark.withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.secondary,
+                        backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
+                        child: _imageFile == null
+                            ? Icon(
+                                _gender == 'Laki-laki' ? Icons.boy_rounded : Icons.girl_rounded,
+                                size: 55,
+                                color: AppColors.primary,
+                              )
+                            : null,
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _showPickerOptions,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 32),
@@ -360,6 +432,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
       birthDate: _birthDate,
       weight: double.tryParse(_weightCtrl.text),
       height: double.tryParse(_heightCtrl.text),
+      photoPath: _imageFile?.path ?? _existing?.photoPath,
     );
     if (_existing != null) {
       await db.updateChild(child);

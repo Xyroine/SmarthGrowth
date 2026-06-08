@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -159,15 +160,20 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                         child: CircleAvatar(
                           radius: 20,
                           backgroundColor: AppColors.bgWhite,
-                          child: Icon(
-                            _child!.gender == 'Perempuan'
-                                ? Icons.girl_rounded
-                                : Icons.boy_rounded,
-                            size: 26,
-                            color: _child!.gender == 'Perempuan'
-                                ? const Color(0xFFEC407A)
-                                : const Color(0xFF42A5F5),
-                          ),
+                          backgroundImage: _child!.photoPath != null && _child!.photoPath!.isNotEmpty
+                              ? FileImage(File(_child!.photoPath!))
+                              : null,
+                          child: _child!.photoPath == null || _child!.photoPath!.isEmpty
+                              ? Icon(
+                                  _child!.gender == 'Perempuan'
+                                      ? Icons.girl_rounded
+                                      : Icons.boy_rounded,
+                                  size: 26,
+                                  color: _child!.gender == 'Perempuan'
+                                      ? const Color(0xFFEC407A)
+                                      : const Color(0xFF42A5F5),
+                                )
+                              : null,
                         ),
                       ),
                       const SizedBox(width: 12),

@@ -7,15 +7,19 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/profile/child_profile_screen.dart';
 import 'screens/profile/growth_chart_screen.dart';
+import 'screens/profile/mother_profile_screen.dart';
+import 'screens/profile/reminder_screen.dart';
 import 'screens/monitoring/motorik_screen.dart';
 import 'screens/monitoring/kognitif_screen.dart';
 import 'screens/monitoring/bahasa_screen.dart';
 import 'screens/monitoring/emosional_screen.dart';
 import 'screens/education/article_detail_screen.dart';
 import 'navigation/main_navigation.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -42,6 +46,8 @@ class SmartGrowthApp extends StatelessWidget {
         '/main': (_) => const MainNavigation(),
         '/child_profile': (_) => const ChildProfileScreen(),
         '/growth_chart': (_) => const GrowthChartScreen(),
+        '/mother_profile': (_) => const MotherProfileScreen(),
+        '/reminder': (_) => const ReminderScreen(),
         '/motorik': (_) => const MotorikScreen(),
         '/kognitif': (_) => const KognitifScreen(),
         '/bahasa': (_) => const BahasaScreen(),
